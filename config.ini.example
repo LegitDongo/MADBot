@@ -1,0 +1,5 @@
+{
+  "channel": "all",
+  "discordtoken": "insert token here",
+  "screenshotsLocation": "file path to where the screenshots folder is for MAD"
+}

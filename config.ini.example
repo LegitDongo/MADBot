@@ -1,5 +1,7 @@
 {
   "channel": "all",
-  "discordtoken": "insert token here",
+  "discordtoken": "insert Discord here",
+  "telegramtoken": "insert Telegram token here",
+  "telegramChatId": "all",
   "screenshotsLocation": "file path to where the screenshots folder is for MAD"
 }

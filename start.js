@@ -1,3 +1,7 @@
+// Not the best fix in the world, but gets rid of the
+// `deprecated Automatic enabling of cancellation of promises is deprecated.` message
+process.env["NTBA_FIX_319"] = 1;
+
 var     fs          = require('fs'),
         request     = require('request'),
         config      = JSON.parse(fs.readFileSync('./config.ini', 'utf8')),
@@ -80,9 +84,11 @@ if (Discord) {
         if (message.attachments.size > 0){
             message.attachments.forEach(function(attachment){
                 download(attachment.url, () => {
-                    message.channel.send('File successfully uploaded').then(m => {
-                        m.delete(5000);
-                    });
+                    if (typeof config.confirmationMessage !== 'undefined' && conf.confirmationMessage) {
+                        message.channel.send('File successfully uploaded').then(m => {
+                            m.delete(5000);
+                        });
+                    }
                 });
             });
         }
@@ -118,25 +124,52 @@ if (Telegram){
     };
 
     var telegramError = (type, error) => {
+        if (typeof error.message !== 'undefined' && typeof error.stack !== 'undefined'){
+            appexit(`Other error: ${ error.message }\n${ error.stack }`);
+        }
         console.log(`${ type } error - ${ error.code }: ${ telegramErrorMessage(error) }`);
     };
 
-    Telegram.on('photo', (msg) => {
-        if (config.telegramChat !== 'all' && msg.chat.id !== config.telegramChat) return;
+    var getPhotoId = (arrayItems) => {
         let biggestPhoto = false;
         let biggestPhotoSize = false;
-        for(let i = msg.photo.length - 1; i >= 0; i--){
-            if (msg.photo[i].file_size > biggestPhotoSize){
-                biggestPhoto = msg.photo[i];
-                biggestPhotoSize = msg.photo[i].file_size;
+        for(let i = arrayItems.length - 1; i >= 0; i--){
+            if (arrayItems[i].file_size > biggestPhotoSize){
+                biggestPhoto = arrayItems[i];
+                biggestPhotoSize = arrayItems[i].file_size;
             }
         }
-        let link = Telegram.getFileLink(biggestPhoto.file_id).then((url) => {
+        if (biggestPhoto) return biggestPhoto.file_id;
+        return false;
+    };
+
+    var telegramPost = (msg) => {
+        if (config.telegramChat !== 'all' && msg.chat.id !== config.telegramChat) return;
+        let link = false;
+        // The "Gallery" option comes in this
+        if (typeof msg.photo !== 'undefined' && msg.photo.length > 0){
+            link = getPhotoId(msg.photo);
+        }
+        // The "File" option comes in this
+        if (typeof msg.document !== 'undefined' &&
+        (msg.document.file_name.endsWith('.png') || msg.document.file_name.endsWith('.jpg'))){
+            link = msg.document.file_id;
+        }
+
+        // Couldn't contain a valid image
+        if (!link) return false;
+
+        Telegram.getFileLink(link).then((url) => {
             download(url, () => {
-                Telegram.sendMessage(msg.chat.id, 'Photo successfully uploaded!');
+                if (typeof config.confirmationMessage !== 'undefined' && config.confirmationMessage) {
+                    Telegram.sendMessage(msg.chat.id, 'Photo successfully uploaded!');
+                }
             });
         });
-    });
+    };
+
+    Telegram.on('photo', (msg) => telegramPost(msg));
+    Telegram.on('channel_post', (msg) => telegramPost(msg));
     Telegram.on('polling_error', (error) => { telegramError('Polling', error); });
     Telegram.on('webhook_error', (error) => { telegramError('Webhook', error); });
 

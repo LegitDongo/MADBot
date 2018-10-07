@@ -57,7 +57,7 @@ var download = (url, finishedCallback = false) => {
     console.log('Downloading file: '+url);
     request.get(url)
         .pipe(fs.createWriteStream(config.screenshotsLocation + '/' +
-            'raidscreen_'+Date.now()+'_9999_9999_99.jpg'))
+            'raidscreen_'+Math.round(Date.now()/1000)+'_9999_9999_99.jpg'))
         .on('close', function(){
             console.log('Finished adding file');
             if (finishedCallback){

@@ -55,9 +55,22 @@ for(let i in required){
 // Set up download function
 var download = (url, finishedCallback = false) => {
     console.log('Downloading file: '+url);
+    let finalCount = false;
+    let count = 1;
+    let second = Math.round(Date.now()/1000);
+    // File of this name already exists. We need to change to a name that doesn't exist already
+    if (fs.existsSync(`${ config.screenshotsLocation }/raidscreen_${ second }_9999_9999_99.jpg`)){
+        while(true){
+            if (!fs.existsSync(`${ config.screenshotsLocation }/raidscreen_${ second }_9999_9999_${ count }.jpg`)){
+                finalCount = count;
+                break;
+            }
+            count++;
+        }
+    }
     request.get(url)
         .pipe(fs.createWriteStream(config.screenshotsLocation + '/' +
-            'raidscreen_'+Date.now()+'_9999_9999_99.jpg'))
+            `raidscreen_${ second }_9999_9999_${ finalCount ? finalCount : '99' }.jpg`))
         .on('close', function(){
             console.log('Finished adding file');
             if (finishedCallback){

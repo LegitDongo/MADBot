@@ -8,8 +8,12 @@ If you need user submissions through Discord and/or Telegram and want it to work
 3. Fill in the config settings appropriately
     * `discordChannel` - the specific channel id that will allow for user submissions
         * Can also use `all` for all channels to be valid
+        * Also accepts a list of channel ids to allow from
+            * Ex. `"discordChannel": ["my-channel-id-1", "my-channel-id-2"],`
     * `telegramChat` - the specific chat id that will allow for user submissions
         * Can also use `all` for all chats that the bot is in to register
+        * Also accepts a list of chat ids to allow from
+            * Ex. `"telegramChat": ["my-chat-id-1", "my-chat-id-2"],`
     * `discordtoken` - the token given to you by discord when you set your bot up
         * Look here for further information [Creating a Discord Bot & Getting a Token](
         https://github.com/reactiflux/discord-irc/wiki/Creating-a-discord-bot-&-getting-a-token)

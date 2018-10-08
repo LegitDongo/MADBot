@@ -93,11 +93,19 @@ if (Discord) {
         if (message.author.bot) return;
         //don't respond if not on a text chat
         if (message.channel.type !== 'text') return;
-        if (config.discordChannel !== 'all' && message.channel.id !== config.discordChannel) return;
+
+        // Check value of config.discordChannel to make sure it's got some form of valid id
+        if (config.discordChannel !== 'all'){
+            if ((typeof config.discordChannel === 'string' && message.channel.id !== config.discordChannel) ||
+                (Array.isArray(config.discordChannel) && config.discordChannel.indexOf(message.channel.id) === -1)){
+                return;
+            }
+        }
+
         if (message.attachments.size > 0){
             message.attachments.forEach(function(attachment){
                 download(attachment.url, () => {
-                    if (typeof config.confirmationMessage !== 'undefined' && conf.confirmationMessage) {
+                    if (typeof config.confirmationMessage !== 'undefined' && config.confirmationMessage) {
                         message.channel.send('File successfully uploaded').then(m => {
                             m.delete(5000);
                         });
@@ -157,7 +165,13 @@ if (Telegram){
     };
 
     var telegramPost = (msg) => {
-        if (config.telegramChat !== 'all' && msg.chat.id !== config.telegramChat) return;
+        // Check value of config.discordChannel to make sure it's got some form of valid id
+        if (config.telegramChat !== 'all'){
+            if ((typeof config.telegramChat === 'string' && msg.chat.id.toString() !== config.telegramChat) ||
+                (Array.isArray(config.telegramChat) && config.telegramChat.indexOf(msg.chat.id.toString()) === -1)){
+                return;
+            }
+        }
         let link = false;
         // The "Gallery" option comes in this
         if (typeof msg.photo !== 'undefined' && msg.photo.length > 0){

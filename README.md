@@ -53,5 +53,12 @@ MADBot requires an access to the screenshot directory of Map-a-Droid
 
 This can be done easily using -v option to map a local DIR in both MAD and MADBot
 
+## Debugging
+Most messages (including downloading of file) are disabled unless you enable debug mode
+
+`-d` or `--debug` will enable debug mode when you run this
+
+Ex. `node start.js --debug`
+
 #### Beer
 If you like the project, you can [Buy me a Beer 🍻](https://ko-fi.com/Z8Z3AVDQ)

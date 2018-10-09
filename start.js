@@ -4,18 +4,45 @@ process.env["NTBA_FIX_319"] = 1;
 
 var     fs          = require('fs'),
         request     = require('request'),
+        winston     = require('winston'),
         config      = JSON.parse(fs.readFileSync('./config.ini', 'utf8')),
         Discord = false,
         Telegram = false
 ;
 
+let debugMode = false;
+for (let val of process.argv){
+    if (val === '-d' || val === '--debug'){
+        debugMode = true;
+        break;
+    }
+}
+
+// Set up logging
+const logger = winston.createLogger({
+    levels: winston.config.syslog.levels,
+    format: winston.format.combine(
+        winston.format.colorize({ all:true }),
+        winston.format.align(),
+        winston.format.timestamp(),
+        winston.format.splat(),  // Allows the text to be formatted at log time
+        winston.format.simple(), // Same as above
+        winston.format.printf(info => `[${info.timestamp}] ${info.level}: ${info.message}`)
+    ),
+    transports: [
+        new winston.transports.Console({
+            level: (debugMode ? 'debug' : 'error')
+        })
+    ]
+});
+
 var appexit = (err = null) => {
     if (err){
-        console.log("\x1b[31m%s\x1b[0m", err);
+        logger.error(err);
     }
     if (Discord){
         Discord.destroy((err) => {
-            console.log(err);
+            logger.error(err);
         });
     }
     process.exit();
@@ -54,12 +81,13 @@ for(let i in required){
 
 // Set up download function
 var download = (url, finishedCallback = false) => {
-    console.log('Downloading file: '+url);
+    logger.debug('File to request: '+url);
     let finalCount = false;
     let count = 1;
     let second = Math.round(Date.now()/1000);
     // File of this name already exists. We need to change to a name that doesn't exist already
     if (fs.existsSync(`${ config.screenshotsLocation }/raidscreen_${ second }_9999_9999_99.jpg`)){
+        logger.debug(`Filename 'raidscreen_${second}_9999_9999_99.jpg' already exists. Trying upcount`);
         while(true){
             if (!fs.existsSync(`${ config.screenshotsLocation }/raidscreen_${ second }_9999_9999_${ count }.jpg`)){
                 finalCount = count;
@@ -68,24 +96,26 @@ var download = (url, finishedCallback = false) => {
             count++;
         }
     }
+    logger.debug(`Attempting to download to 'raidscreen_${second}_9999_9999_${ finalCount ? finalCount : '99' }.jpg'`);
     request.get(url)
         .pipe(fs.createWriteStream(config.screenshotsLocation + '/' +
             `raidscreen_${ second }_9999_9999_${ finalCount ? finalCount : '99' }.jpg`))
         .on('close', function(){
-            console.log('Finished adding file');
+            logger.debug(
+                `Finished adding file: raidscreen_${ second }_9999_9999_${ finalCount ? finalCount : '99' }.jpg`);
             if (finishedCallback){
                 finishedCallback();
             }
         })
         .on('error', function (err) {
-            console.log(err);
+            logger.error(err);
         });
 };
 
 // Set up Discord requirements
 if (Discord) {
     var discordReady = () => {
-        console.log('Ready to go MAD');
+        logger.info('Ready to go MAD');
     };
 
     var discordMessage = message => {
@@ -119,7 +149,7 @@ if (Discord) {
     Discord.on('message', discordMessage);
     Discord.login(config.discordtoken);
     Discord.on('disconnect', (event) => {
-        console.log(`Disconnected with code ${ event.code }`);
+        logger.error(`Disconnected with code ${ event.code }`);
         if(event.code !== 1006)
             appexit();
         else
@@ -148,7 +178,7 @@ if (Telegram){
         if (typeof error.message !== 'undefined' && typeof error.stack !== 'undefined'){
             appexit(`Other error: ${ error.message }\n${ error.stack }`);
         }
-        console.log(`${ type } error - ${ error.code }: ${ telegramErrorMessage(error) }`);
+        logger.error(`${ type } error - ${ error.code }: ${ telegramErrorMessage(error) }`);
     };
 
     var getPhotoId = (arrayItems) => {

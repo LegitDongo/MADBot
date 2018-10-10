@@ -83,7 +83,7 @@ for(let i in required){
 var download = (url, finishedCallback = false) => {
     logger.debug('File to request: '+url);
     let finalCount = false;
-    let count = 1;
+    let count = 7;
     let second = Math.round(Date.now()/1000);
     // File of this name already exists. We need to change to a name that doesn't exist already
     if (fs.existsSync(`${ config.screenshotsLocation }/raidscreen_${ second }_9999_9999_99.jpg`)){

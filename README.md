@@ -18,7 +18,16 @@ If you need user submissions through Discord and/or Telegram and want it to work
         * Look here for further information [Creating a Discord Bot & Getting a Token](
         https://github.com/reactiflux/discord-irc/wiki/Creating-a-discord-bot-&-getting-a-token)
     * `telegramtoken` - the token given to you by the BotFather when you set your bot up
-        * See below for further instruction
+        * See [below](###telegram-broad-setup-guide) for further instruction
+    * `messengertoken` - the page token given to you by FB when you set your bot up
+        * Look [below](###fb-messenger-broad-setup-guide) for further information
+    * `messengerVerifyToken` - token specified when you set up the FB bot
+        * Only used for initial verification, afterwards is optional
+    * `messengerAppSecret` - Your App Secret token used for message integrity check. If specified, every POST request 
+    will be tested for spoofing.
+        * Optional
+        * I honestly don't know what this means, but I put it in as an option in case you do
+    * `messengerHttpPort` - the port that MADBot is going to expect FB Messenger to send webhooks to
     * `screenshotsLocation` - the path on your machine to the screenshots folder
     * `confirmationMessage` - send a message back to the channel when the bot has finished downloading the image
     and saving it in the screenshots folder
@@ -41,7 +50,51 @@ If you need user submissions through Discord and/or Telegram and want it to work
 4. Determine if you want to allow all places that the bot is included at to submit raid images or only one
     * This is the `telegramChat` config option mentioned earlier
     * To get a chat id, follow 
-    [this guide](https://docs.influxdata.com/kapacitor/v1.5/event_handlers/telegram/#get-your-telegram-chat-id) 
+    [this guide](https://docs.influxdata.com/kapacitor/v1.5/event_handlers/telegram/#get-your-telegram-chat-id)
+    
+### FB Messenger Broad Setup Guide
+You have to have a few things for this to work appropriately
+1. A page associated with a Messenger chat
+2. a `ngrok` account, equivalent HTTP tunneling service, or a public facing domain/server that you're cool with
+FB sending webhooks to
+
+[Here's an in-depth guide to getting your Facebook page created and getting the token](https://medium.com/crowdbotics/how-to-create-your-very-own-facebook-messenger-bot-with-dialogflow-and-node-js-in-just-one-day-f5f2f5792be5)
+
+Start reading at `3. Setting up Facebook Application`
+
+Note: you don't need Dialogflow or any of the code on the page
+
+Here's the tl;dr:
+1. Create a page [here](https://facebook.com/pages/create)
+2. Sign up for FB developers and create an app [here](https://developers.facebook.com/quickstarts)
+3. Select the Messenger icon and click the `Set Up` button
+4. Find the `Token Generation` section, select the page associated, and you will get your page access token in the box
+next to the page you selected
+5. Copy the token generated into `messengertoken` in your config
+6. (Skip if not using ngrok) Go to [ngrok](https://ngrok.com/), make an account, go to the getting started page, download for whatever OS you use
+    * Make note of the token in step 3
+7. (Skip if not using ngrok) Extract ngrok, put it where you want it, navigate there in a console, and use the following commands in order
+    * `./ngrok authtoken YOURAUTHTOKENHERE` - the auth token comes from the getting started page
+    * `./ngrok http yourport` - the `yourport` part is the port you put into the `messengerHttpPort` part of your config
+    * Make note of the `Forwarding` section (where the URL starts with `https`) for the next step
+        * Ex. `https://2fdb5541.ngrok.io`
+8. Go to the `Webhooks` section back in your screen from stop 4 and click `Setup Webhooks`, fill out `Callback URL` 
+with your ngrok (or equivalent) URL here (from the previous step)
+9. Fill out the `Verify Token` - this can be anything you want it to be, but it needs to be put into your config at 
+`messengerVerifyToken` for initial verification
+9. Select the `messages` and `messaging_postbacks` subscription fields
+10. Start the MADBot with these the previous config items, and *then* click `Verify and Save`
+    * If you get a `502 Bad Gateway error`, you have to be running MADBot *and* ngrok at the same time
+    
+####Some notes about ngrok:
+
+Only the paid tier has a permanent url. If you use the free tier, you will have to change the url listed in your 
+FB webhooks at least daily
+
+To do that, go to [Facebook Developers](https://developers.facebook.com), go to `Webhooks` then under `Page` webhooks, 
+click `Edit Subscription`
+
+This should take you back to a similar prompt from step 8 & 9
     
 ## Docker Usage
 ```dockerfile

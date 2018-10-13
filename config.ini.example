@@ -3,6 +3,10 @@
   "discordtoken": "",
   "telegramtoken": "",
   "telegramChat": "all",
+  "messengertoken": "",
+  "messengerVerifyToken": "",
+  "messengerAppSecret": "",
+  "messengerHttpPort": 3000,
   "screenshotsLocation": "",
   "confirmationMessage": true
 }

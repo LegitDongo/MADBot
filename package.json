@@ -4,6 +4,7 @@
   "dependencies": {
     "discord.js": "^11.4.2",
     "fs": "0.0.1-security",
+    "messenger-bot": "^2.5.0",
     "node-telegram-bot-api": "^0.30.0",
     "request": "^2.88.0",
     "winston": "^3.1.0"

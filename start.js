@@ -6,8 +6,9 @@ var     fs          = require('fs'),
         request     = require('request'),
         winston     = require('winston'),
         config      = JSON.parse(fs.readFileSync('./config.ini', 'utf8')),
-        Discord = false,
-        Telegram = false
+        Discord     = false,
+        Telegram    = false,
+        Messenger   = false
 ;
 
 let debugMode = false;
@@ -53,6 +54,7 @@ if (typeof config.discordtoken !== 'undefined' && config.discordtoken !== ''){
     if (typeof config.discordChannel === 'undefined' || config.discordChannel === ''){
         appexit('You have to have the "discordChannel" section filled out in your config!');
     }
+    logger.debug('Requiring Discord API and creating instance');
     // Login done in Discord block later
     Discord = new (require('discord.js')).Client();
 
@@ -62,12 +64,32 @@ if (typeof config.telegramtoken !== 'undefined' && config.telegramtoken !== ''){
     if (typeof config.telegramChat === 'undefined' || config.telegramChat === ''){
         appexit('You have to have the "telegramChat" section filled out in your config!');
     }
+    logger.debug('Requiring Telegram API and creating instance');
     // Login done here for Telegram
     Telegram = new (require('node-telegram-bot-api'))(config.telegramtoken, { polling: true });
 }
 
-if (!Discord && !Telegram){
-    appexit('You have to have at least one service (Discord or Telegram) set up!');
+let messengerRequirements = ['messengertoken', 'messengerVerifyToken', 'messengerHttpPort']; //, 'messengerAppSecret'
+let messengerGoodToRoll = true;
+for(let i in messengerRequirements){
+    if (typeof config[messengerRequirements[i]] === 'undefined' || config[messengerRequirements[i]] === ''){
+        messengerGoodToRoll = false;
+        break;
+    }
+}
+if (messengerGoodToRoll){
+    logger.debug('Requiring FB Messenger API and creating instance/http server');
+    Messenger = new (require('messenger-bot'))({
+        token: config.messengertoken,
+        verify: config.messengerVerifyToken,
+        app_secret: config.messengerAppSecret
+    });
+    (require('http')).createServer(Messenger.middleware()).listen(config.messengerHttpPort);
+    logger.info('FB Messenger server running on port 3000');
+}
+
+if (!Discord && !Telegram && !Messenger){
+    appexit('You have to have at least one service (Discord or Telegram or FB Messenger) set up!');
 }
 
 // Check required config options
@@ -80,42 +102,49 @@ for(let i in required){
 }
 
 // Set up download function
-var download = (url, finishedCallback = false) => {
-    logger.debug('File to request: '+url);
-    let finalCount = false;
-    let count = 7;
-    let second = Math.round(Date.now()/1000);
+function download (url, finishedCallback = false, errorCallback = false) {
+    this.url = url;
+    this.finishedCallback = finishedCallback;
+    this.errorCallback = errorCallback;
+    logger.debug('File to request: '+this.url);
+    this.finalCount = false;
+    this.count = 7;
+    this.second = Math.round(Date.now()/1000);
     // File of this name already exists. We need to change to a name that doesn't exist already
-    if (fs.existsSync(`${ config.screenshotsLocation }/raidscreen_${ second }_9999_9999_99.jpg`)){
-        logger.debug(`Filename 'raidscreen_${second}_9999_9999_99.jpg' already exists. Trying upcount`);
+    if (fs.existsSync(`${ config.screenshotsLocation }/raidscreen_${ this.second }_9999_9999_99.jpg`)){
+        logger.debug(`Filename 'raidscreen_${this.second}_9999_9999_99.jpg' already exists. Trying upcount`);
         while(true){
-            if (!fs.existsSync(`${ config.screenshotsLocation }/raidscreen_${ second }_9999_9999_${ count }.jpg`)){
-                finalCount = count;
+            if (!fs.existsSync(`${ config.screenshotsLocation }/raidscreen_${ this.second }_9999_9999_${ this.count }.jpg`)){
+                this.finalCount = this.count;
                 break;
             }
-            count++;
+            this.count++;
         }
     }
-    logger.debug(`Attempting to download to 'raidscreen_${second}_9999_9999_${ finalCount ? finalCount : '99' }.jpg'`);
+    this.fileName = `raidscreen_${this.second}_9999_9999_${ this.finalCount ? this.finalCount : '99' }.jpg`;
+    logger.debug(`Attempting to download to '${ this.fileName }'`);
+    let that = this;
     request.get(url)
-        .pipe(fs.createWriteStream(config.screenshotsLocation + '/' +
-            `raidscreen_${ second }_9999_9999_${ finalCount ? finalCount : '99' }.jpg`))
+        .pipe(fs.createWriteStream(config.screenshotsLocation + '/' + that.fileName))
         .on('close', function(){
-            logger.debug(
-                `Finished adding file: raidscreen_${ second }_9999_9999_${ finalCount ? finalCount : '99' }.jpg`);
-            if (finishedCallback){
-                finishedCallback();
+            logger.debug(`Finished adding file: ${ that.fileName }`);
+            if (that.finishedCallback){
+                that.finishedCallback();
             }
         })
         .on('error', function (err) {
             logger.error(err);
+            if (that.errorCallback){
+                that.errorCallback();
+            }
         });
-};
+}
 
 // Set up Discord requirements
 if (Discord) {
+    logger.debug('Setting up Discord stuff');
     var discordReady = () => {
-        logger.info('Ready to go MAD');
+        logger.info('Discord is Ready to go MAD');
     };
 
     var discordMessage = message => {
@@ -134,7 +163,7 @@ if (Discord) {
 
         if (message.attachments.size > 0){
             message.attachments.forEach(function(attachment){
-                download(attachment.url, () => {
+                new download(attachment.url, () => {
                     if (typeof config.confirmationMessage !== 'undefined' && config.confirmationMessage) {
                         message.channel.send('File successfully uploaded').then(m => {
                             m.delete(5000);
@@ -159,6 +188,7 @@ if (Discord) {
 
 // Set up Telegram requirements
 if (Telegram){
+    logger.debug('Setting up Telegram stuff');
     var telegramErrorMessage = (errorObj) => {
         // error.response is not available if code is EFATAL
         if (errorObj.code === 'EFATAL'){
@@ -217,7 +247,7 @@ if (Telegram){
         if (!link) return false;
 
         Telegram.getFileLink(link).then((url) => {
-            download(url, () => {
+            new download(url, () => {
                 if (typeof config.confirmationMessage !== 'undefined' && config.confirmationMessage) {
                     Telegram.sendMessage(msg.chat.id, 'Photo successfully uploaded!');
                 }
@@ -232,7 +262,32 @@ if (Telegram){
 
 }
 
+// Set up FB Messenger requirements
+if (Messenger){
+    logger.debug('Setting up FB Messenger stuff');
+    Messenger.on('error', (err) => {
+        logger.error(err.message);
+    });
+    Messenger.on('message', (payload, reply) => {
+        if (typeof payload.message.attachments === 'undefined' || payload.message.attachments.length === 0) return;
+        for(let i in payload.message.attachments){
+            if (payload.message.attachments[i].type === 'image' && typeof payload.message.sticker_id === 'undefined'){
+                new download(payload.message.attachments[i].payload.url, () => {
+                    reply({text: 'Image successfully uploaded'}, (err) => {
+                        if (err) logger.error(err);
+                    });
+                }, () => {
+                    reply({text: 'There was a problem uploading your image'}, (err) => {
+                        if (err) logger.error(err);
+                    });
+                });
+            }
+        }
+    });
+}
+
 //do some cleanup on ctrl + c
 process.on('SIGINT', () => {
+    logger.debug('CTRL + C pressed - shutting down');
     appexit();
 });

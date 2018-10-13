@@ -18,9 +18,9 @@ If you need user submissions through Discord and/or Telegram and want it to work
         * Look here for further information [Creating a Discord Bot & Getting a Token](
         https://github.com/reactiflux/discord-irc/wiki/Creating-a-discord-bot-&-getting-a-token)
     * `telegramtoken` - the token given to you by the BotFather when you set your bot up
-        * See [below](###telegram-broad-setup-guide) for further instruction
+        * See [below](#telegram-broad-setup-guide) for further instruction
     * `messengertoken` - the page token given to you by FB when you set your bot up
-        * Look [below](###fb-messenger-broad-setup-guide) for further information
+        * Look [below](#fb-messenger-broad-setup-guide) for further information
     * `messengerVerifyToken` - token specified when you set up the FB bot
         * Only used for initial verification, afterwards is optional
     * `messengerAppSecret` - Your App Secret token used for message integrity check. If specified, every POST request 
